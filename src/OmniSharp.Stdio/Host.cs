@@ -21,6 +21,8 @@ namespace OmniSharp.Stdio
 {
     internal class Host : IDisposable
     {
+        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private readonly TextReader _input;
         private readonly ISharedTextWriter _writer;
         private readonly IServiceProvider _serviceProvider;
@@ -252,6 +254,8 @@ namespace OmniSharp.Stdio
                 builder.AppendLine("************ Request ************");
                 builder.Append(JToken.Parse(json).ToString(Formatting.Indented));
                 logger.LogDebug(builder.ToString());
+                
+                log.Info(builder.ToString());
             }
             finally
             {
@@ -266,6 +270,8 @@ namespace OmniSharp.Stdio
             {
                 builder.AppendLine("************  Response ************ ");
                 builder.Append(JToken.Parse(json).ToString(Formatting.Indented));
+
+                log.Info(builder.ToString());
 
                 if (isSuccess)
                 {
