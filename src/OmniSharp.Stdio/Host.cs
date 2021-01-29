@@ -13,14 +13,16 @@ using OmniSharp.Endpoint;
 using OmniSharp.Mef;
 using OmniSharp.Models.UpdateBuffer;
 using OmniSharp.Plugins;
-using OmniSharp.Services;
 using OmniSharp.Protocol;
+using OmniSharp.Services;
 using OmniSharp.Utilities;
 
 namespace OmniSharp.Stdio
 {
     internal class Host : IDisposable
     {
+        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private readonly TextReader _input;
         private readonly ISharedTextWriter _writer;
         private readonly IServiceProvider _serviceProvider;
@@ -116,15 +118,6 @@ namespace OmniSharp.Stdio
                         return Task.FromResult<object>(null);
                     }))
             );
-            endpointHandlers.Add(
-                OmniSharpEndpoints.CancelRequest,
-                new Lazy<EndpointHandler>(
-                    () => new GenericEndpointHandler(x =>
-                    {
-//                        x.ArgumentsStream.De
-                        return Task.FromResult<object>(null);
-                    }))
-            );
 
             return endpointHandlers;
         }
@@ -217,6 +210,10 @@ namespace OmniSharp.Stdio
 
             try
             {
+                if (request.Command.StartsWith("/cancelRequest"))
+                {
+                    log.Debug("cancelrequest");
+                }
                 if (!request.Command.StartsWith("/"))
                 {
                     request.Command = $"/{request.Command}";
@@ -224,7 +221,8 @@ namespace OmniSharp.Stdio
                 // hand off request to next layer
                 if (_endpointHandlers.TryGetValue(request.Command, out var handler))
                 {
-                    if (handler is object){
+                    if (handler is object)
+                    {
 
                     }
                     var result = await handler.Value.Handle(request);
@@ -274,6 +272,7 @@ namespace OmniSharp.Stdio
                 builder.AppendLine("************ Request ************");
                 builder.Append(JToken.Parse(json).ToString(Formatting.Indented));
                 logger.Log(logLevel, builder.ToString());
+                log.Info(builder.ToString());
             }
             finally
             {
@@ -288,6 +287,8 @@ namespace OmniSharp.Stdio
             {
                 builder.AppendLine("************  Response ************ ");
                 builder.Append(JToken.Parse(json).ToString(Formatting.Indented));
+
+                log.Info(builder.ToString());
 
                 if (isSuccess)
                 {
