@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -17,11 +18,13 @@ namespace OmniSharp.Roslyn.CSharp.Services.Navigation
     public class FindUsagesService : IRequestHandler<FindUsagesRequest, QuickFixResponse>
     {
         private readonly OmniSharpWorkspace _workspace;
+        private readonly OmniSharpClientRequestService _clientRequestService;
 
         [ImportingConstructor]
-        public FindUsagesService(OmniSharpWorkspace workspace)
+        public FindUsagesService(OmniSharpWorkspace workspace, OmniSharpClientRequestService clientRequestService)
         {
             _workspace = workspace;
+            _clientRequestService = clientRequestService;
         }
 
         public async Task<QuickFixResponse> Handle(FindUsagesRequest request)
@@ -39,8 +42,8 @@ namespace OmniSharp.Roslyn.CSharp.Services.Navigation
             var symbol = await SymbolFinder.FindSymbolAtPositionAsync(semanticModel, position, _workspace);
             var definition = await SymbolFinder.FindSourceDefinitionAsync(symbol, _workspace.CurrentSolution);
             var usages = request.OnlyThisFile
-                ? await SymbolFinder.FindReferencesAsync(definition ?? symbol, _workspace.CurrentSolution, ImmutableHashSet.Create(document))
-                : await SymbolFinder.FindReferencesAsync(definition ?? symbol, _workspace.CurrentSolution);
+                ? await SymbolFinder.FindReferencesAsync(definition ?? symbol, _workspace.CurrentSolution, ImmutableHashSet.Create(document), _clientRequestService.GetToken(request))
+                : await SymbolFinder.FindReferencesAsync(definition ?? symbol, _workspace.CurrentSolution, _clientRequestService.GetToken(request));
             var locations = usages.SelectMany(u => u.Locations).Select(l => l.Location).ToList();
 
             if (!request.ExcludeDefinition)

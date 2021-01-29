@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace OmniSharp.Protocol
@@ -16,12 +17,12 @@ namespace OmniSharp.Protocol
             {
                 throw new ArgumentException("invalid seq-value");
             }
-            
+
             if (string.IsNullOrWhiteSpace(result.Command))
             {
                 throw new ArgumentException("missing command");
             }
-            
+
             JToken arguments;
             if (obj.TryGetValue("arguments", StringComparison.OrdinalIgnoreCase, out arguments))
             {
@@ -31,12 +32,15 @@ namespace OmniSharp.Protocol
             {
                 result.ArgumentsStream = Stream.Null;
             }
+            result.cancellationTokenSource = new CancellationTokenSource();
             return result;
         }
 
         public string Command { get; set; }
 
         public Stream ArgumentsStream { get; set; }
+
+        private CancellationTokenSource cancellationTokenSource;
 
         public RequestPacket() : base("request") { }
 
@@ -50,5 +54,12 @@ namespace OmniSharp.Protocol
                 Command = Command
             };
         }
+
+        public void CancelRequest()
+        {
+            cancellationTokenSource.Cancel();
+        }
+
+        public CancellationToken GetCancellationToken() => cancellationTokenSource.Token;
     }
 }

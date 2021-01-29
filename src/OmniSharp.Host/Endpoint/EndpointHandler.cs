@@ -28,6 +28,7 @@ namespace OmniSharp.Endpoint
             IEnumerable<Lazy<IRequestHandler, OmniSharpRequestHandlerMetadata>> handlers,
             Lazy<EndpointHandler<UpdateBufferRequest, object>> updateBufferHandler,
             IEnumerable<Plugin> plugins)
+            where TRequest : IRequest
         {
             return new EndpointHandler<TRequest, TResponse>(languagePredicateHandler, host, logger, metadata, handlers.Where(x => x.Metadata.EndpointName == metadata.EndpointName), updateBufferHandler, plugins);
         }
@@ -44,7 +45,7 @@ namespace OmniSharp.Endpoint
         }
     }
 
-    public class EndpointHandler<TRequest, TResponse> : EndpointHandler
+    public class EndpointHandler<TRequest, TResponse> : EndpointHandler where TRequest : IRequest
     {
         private readonly CompositionHost _host;
         private readonly IPredicateHandler _languagePredicateHandler;
@@ -106,6 +107,8 @@ namespace OmniSharp.Endpoint
         public async Task<object> Process(RequestPacket packet, LanguageModel model, JToken requestObject)
         {
             var request = requestObject.ToObject<TRequest>();
+            var clientRequestService = _host.GetExport<OmniSharpClientRequestService>();
+            clientRequestService.RegisterRequest(packet.Seq, request);
             if (request is Request && _updateBufferHandler.Value != null)
             {
                 var realRequest = request as Request;
@@ -139,7 +142,9 @@ namespace OmniSharp.Endpoint
                 }
             }
 
-            return await HandleAllRequest(request, packet);
+            var response = await HandleAllRequest(request, packet);
+            clientRequestService.UnregisterRequest(packet.Seq);
+            return response;
         }
 
         private Task<object> HandleLanguageRequest(string language, TRequest request, RequestPacket packet)

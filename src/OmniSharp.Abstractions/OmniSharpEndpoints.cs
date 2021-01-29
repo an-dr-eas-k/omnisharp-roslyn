@@ -39,6 +39,7 @@ namespace OmniSharp
         public const string CheckAliveStatus = "/checkalivestatus";
         public const string CheckReadyStatus = "/checkreadystatus";
         public const string StopServer = "/stopserver";
+        public const string CancelRequest = "/cancelrequest";
 
         public const string Open = "/open";
         public const string Close = "/close";

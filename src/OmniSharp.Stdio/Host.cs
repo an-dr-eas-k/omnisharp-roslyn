@@ -116,6 +116,15 @@ namespace OmniSharp.Stdio
                         return Task.FromResult<object>(null);
                     }))
             );
+            endpointHandlers.Add(
+                OmniSharpEndpoints.CancelRequest,
+                new Lazy<EndpointHandler>(
+                    () => new GenericEndpointHandler(x =>
+                    {
+//                        x.ArgumentsStream.De
+                        return Task.FromResult<object>(null);
+                    }))
+            );
 
             return endpointHandlers;
         }
@@ -193,9 +202,12 @@ namespace OmniSharp.Stdio
             }
         }
 
+        Dictionary<int, RequestPacket> packages = new Dictionary<int, RequestPacket>();
+
         private async Task HandleRequest(string json, ILogger logger)
         {
             var request = RequestPacket.Parse(json);
+            packages.Add(request.Seq, request);
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 LogRequest(json, logger, LogLevel.Debug);
@@ -212,6 +224,9 @@ namespace OmniSharp.Stdio
                 // hand off request to next layer
                 if (_endpointHandlers.TryGetValue(request.Command, out var handler))
                 {
+                    if (handler is object){
+
+                    }
                     var result = await handler.Value.Handle(request);
                     response.Body = result;
                     return;
