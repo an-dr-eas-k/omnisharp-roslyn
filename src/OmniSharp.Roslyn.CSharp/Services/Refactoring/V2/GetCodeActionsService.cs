@@ -22,8 +22,9 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
             [ImportMany] IEnumerable<ICodeActionProvider> providers,
             ILoggerFactory loggerFactory,
             ICsDiagnosticWorker diagnostics,
-            CachingCodeFixProviderForProjects codeFixesForProjects)
-            : base(workspace, providers, loggerFactory.CreateLogger<GetCodeActionsService>(), diagnostics, codeFixesForProjects)
+            CachingCodeFixProviderForProjects codeFixesForProjects,
+            OmniSharpClientRequestService clientRequestService)
+            : base(workspace, providers, loggerFactory.CreateLogger<GetCodeActionsService>(), diagnostics, codeFixesForProjects, clientRequestService)
         {
         }
 

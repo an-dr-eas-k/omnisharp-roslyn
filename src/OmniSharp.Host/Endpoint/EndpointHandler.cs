@@ -57,6 +57,7 @@ namespace OmniSharp.Endpoint
         private readonly ILogger _logger;
         private readonly IEnumerable<Plugin> _plugins;
         private readonly Lazy<EndpointHandler<UpdateBufferRequest, object>> _updateBufferHandler;
+        private readonly OmniSharpClientRequestService _clientRequestService;
 
         public EndpointHandler(IPredicateHandler languagePredicateHandler, CompositionHost host, ILogger logger, OmniSharpEndpointMetadata metadata, IEnumerable<Lazy<IRequestHandler, OmniSharpRequestHandlerMetadata>> handlers, Lazy<EndpointHandler<UpdateBufferRequest, object>> updateBufferHandler, IEnumerable<Plugin> plugins)
         {
@@ -73,6 +74,8 @@ namespace OmniSharp.Endpoint
             _updateBufferHandler = updateBufferHandler;
 
             _exports = new Lazy<Task<Dictionary<string, ExportHandler<TRequest, TResponse>[]>>>(() => LoadExportHandlers(handlers));
+            _clientRequestService = _host.GetExport<OmniSharpClientRequestService>();
+
         }
 
         private Task<Dictionary<string, ExportHandler<TRequest, TResponse>[]>> LoadExportHandlers(IEnumerable<Lazy<IRequestHandler, OmniSharpRequestHandlerMetadata>> handlers)
@@ -101,14 +104,15 @@ namespace OmniSharp.Endpoint
             var requestObject = DeserializeRequestObject(packet.ArgumentsStream);
             var model = GetLanguageModel(requestObject);
 
-            return Process(packet, model, requestObject);
+            var result = Process(packet, model, requestObject);
+            _clientRequestService.UnregisterRequest(packet.Seq);
+            return result;
         }
 
         public async Task<object> Process(RequestPacket packet, LanguageModel model, JToken requestObject)
         {
             var request = requestObject.ToObject<TRequest>();
-            var clientRequestService = _host.GetExport<OmniSharpClientRequestService>();
-            clientRequestService.RegisterRequest(packet.Seq, request);
+            _clientRequestService.RegisterRequest(packet.Seq, request);
             if (request is Request && _updateBufferHandler.Value != null)
             {
                 var realRequest = request as Request;
@@ -142,9 +146,7 @@ namespace OmniSharp.Endpoint
                 }
             }
 
-            var response = await HandleAllRequest(request, packet);
-            clientRequestService.UnregisterRequest(packet.Seq);
-            return response;
+            return await HandleAllRequest(request, packet);
         }
 
         private Task<object> HandleLanguageRequest(string language, TRequest request, RequestPacket packet)

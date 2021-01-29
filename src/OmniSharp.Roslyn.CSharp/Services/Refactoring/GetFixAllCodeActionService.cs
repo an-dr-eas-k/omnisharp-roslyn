@@ -23,8 +23,9 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring
             [ImportMany] IEnumerable<ICodeActionProvider> providers,
             ILoggerFactory loggerFactory,
             ICsDiagnosticWorker diagnostics,
-            CachingCodeFixProviderForProjects codeFixesForProject
-        ) : base(workspace, providers, loggerFactory.CreateLogger<GetFixAllCodeActionService>(), diagnostics, codeFixesForProject)
+            CachingCodeFixProviderForProjects codeFixesForProject,
+            OmniSharpClientRequestService clientRequestService
+        ) : base(workspace, providers, loggerFactory.CreateLogger<GetFixAllCodeActionService>(), diagnostics, codeFixesForProject, clientRequestService)
         {
         }
 
@@ -37,7 +38,7 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring
                 return new GetFixAllResponse(ImmutableArray<FixAllItem>.Empty);
             }
 
-            var allDiagnostics = await GetDiagnosticsAsync(request.Scope, document);
+            var allDiagnostics = await GetDiagnosticsAsync(request.Scope, document, _clientRequestService.GetToken(request));
             var validFixes = allDiagnostics
                 .GroupBy(docAndDiag => docAndDiag.ProjectId)
                 .SelectMany(grouping =>

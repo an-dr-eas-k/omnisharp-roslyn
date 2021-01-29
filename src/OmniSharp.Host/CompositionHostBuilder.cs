@@ -140,6 +140,8 @@ namespace OmniSharp
             services.AddSingleton<IAnalyzerAssemblyLoader, AnalyzerAssemblyLoader>();
             services.AddOptions();
 
+            services.AddSingleton<OmniSharpClientRequestService>();
+
             services.AddSingleton<IDotNetCliService, DotNetCliService>();
 
             // MSBuild

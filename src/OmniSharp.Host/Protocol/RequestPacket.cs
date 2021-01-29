@@ -46,6 +46,10 @@ namespace OmniSharp.Protocol
 
         public ResponsePacket Reply()
         {
+            if (Command == OmniSharpEndpoints.CancelRequest)
+            {
+                return null;
+            }
             return new ResponsePacket()
             {
                 Request_seq = Seq,

@@ -31,12 +31,13 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
 {
     public abstract class BaseCodeActionService<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        protected readonly OmniSharpWorkspace Workspace;
+       protected readonly OmniSharpWorkspace Workspace;
         protected readonly IEnumerable<ICodeActionProvider> Providers;
         protected readonly ILogger Logger;
         private readonly ICsDiagnosticWorker _diagnostics;
         private readonly CachingCodeFixProviderForProjects _codeFixesForProject;
         private readonly MethodInfo _getNestedCodeActions;
+        protected readonly OmniSharpClientRequestService _clientRequestService;
 
         protected Lazy<List<CodeRefactoringProvider>> OrderedCodeRefactoringProviders;
 
@@ -51,13 +52,15 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
             IEnumerable<ICodeActionProvider> providers,
             ILogger logger,
             ICsDiagnosticWorker diagnostics,
-            CachingCodeFixProviderForProjects codeFixesForProject)
+            CachingCodeFixProviderForProjects codeFixesForProject,
+            OmniSharpClientRequestService clientRequestService)
         {
             Workspace = workspace;
             Providers = providers;
             Logger = logger;
             _diagnostics = diagnostics;
             _codeFixesForProject = codeFixesForProject;
+            _clientRequestService = clientRequestService;
             OrderedCodeRefactoringProviders = new Lazy<List<CodeRefactoringProvider>>(() => GetSortedCodeRefactoringProviders());
 
             // Sadly, the CodeAction.NestedCodeActions property is still internal.
@@ -125,9 +128,9 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
             return new TextSpan(position, length: 0);
         }
 
-        private async Task CollectCodeFixesActions(Document document, TextSpan span, List<CodeAction> codeActions)
+        private async Task CollectCodeFixesActions(Document document, TextSpan span, List<CodeAction> codeActions, CancellationToken cancellationToken = default)
         {
-            var diagnosticsWithProjects = await _diagnostics.GetDiagnostics(ImmutableArray.Create(document.FilePath));
+            var diagnosticsWithProjects = await _diagnostics.GetDiagnostics(ImmutableArray.Create(document.FilePath), cancellationToken);
 
             var groupedBySpan = diagnosticsWithProjects
                     .SelectMany(x => x.Diagnostics)
@@ -242,18 +245,18 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
             return _codeFixesForProject.GetAllCodeFixesForProject(document.Project.Id).FirstOrDefault(provider => provider.HasFixForId(id));
         }
 
-        protected async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnosticsAsync(FixAllScope scope, Document document)
+        protected async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnosticsAsync(FixAllScope scope, Document document, CancellationToken cancellationToken = default)
         {
             switch (scope)
             {
                 case FixAllScope.Solution:
                     var documentsInSolution = document.Project.Solution.Projects.SelectMany(p => p.Documents).Select(d => d.FilePath).ToImmutableArray();
-                    return await _diagnostics.GetDiagnostics(documentsInSolution);
+                    return await _diagnostics.GetDiagnostics(documentsInSolution, cancellationToken);
                 case FixAllScope.Project:
                     var documentsInProject = document.Project.Documents.Select(d => d.FilePath).ToImmutableArray();
-                    return await _diagnostics.GetDiagnostics(documentsInProject);
+                    return await _diagnostics.GetDiagnostics(documentsInProject, cancellationToken);
                 case FixAllScope.Document:
-                    return await _diagnostics.GetDiagnostics(ImmutableArray.Create(document.FilePath));
+                    return await _diagnostics.GetDiagnostics(ImmutableArray.Create(document.FilePath), cancellationToken);
                 default:
                     throw new InvalidOperationException();
             }

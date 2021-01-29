@@ -76,7 +76,7 @@ namespace OmniSharp.Roslyn.CSharp.Services.Diagnostics
             }
         }
 
-        public async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths)
+        public async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths, CancellationToken cancellationToken = default)
         {
             var documentIds = GetDocumentIdsFromPaths(documentPaths);
 
@@ -192,7 +192,7 @@ namespace OmniSharp.Roslyn.CSharp.Services.Diagnostics
             }
         }
 
-        public async Task<IEnumerable<Diagnostic>> AnalyzeDocumentAsync(Document document, CancellationToken cancellationToken)
+        public async Task<IEnumerable<Diagnostic>> AnalyzeDocumentAsync(Document document, CancellationToken cancellationToken = default)
         {
             Project project = document.Project;
             var allAnalyzers = _providers
@@ -345,7 +345,7 @@ namespace OmniSharp.Roslyn.CSharp.Services.Diagnostics
             return documentIds;
         }
 
-        public async Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync()
+        public async Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync(CancellationToken cancellationToken = default)
         {
             var allDocumentsIds = _workspace.CurrentSolution.Projects.SelectMany(x => x.DocumentIds).ToImmutableArray();
             return await GetDiagnosticsByDocumentIds(allDocumentsIds, waitForDocuments: false);

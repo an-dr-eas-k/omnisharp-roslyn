@@ -4,12 +4,14 @@ using System.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using OmniSharp.Mef;
 using OmniSharp.Models;
 
 namespace OmniSharp
 {
     [Shared, Export]
+    [OmniSharpHandler(OmniSharpEndpoints.CancelRequest, LanguageNames.CSharp)]
     public class OmniSharpClientRequestService : IRequestHandler<CancellationRequest, object>
     {
 

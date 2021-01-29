@@ -18,27 +18,31 @@ namespace OmniSharp.Roslyn.CSharp.Services.Diagnostics
     {
         private readonly ICsDiagnosticWorker _diagWorker;
         private readonly ILogger<CodeCheckService> _logger;
+        private readonly OmniSharpClientRequestService _clientRequestService;
 
         [ImportingConstructor]
         public CodeCheckService(
             OmniSharpWorkspace workspace,
             ILoggerFactory loggerFactory,
             OmniSharpOptions options,
-            ICsDiagnosticWorker diagWorker)
+            ICsDiagnosticWorker diagWorker,
+            OmniSharpClientRequestService clientRequestService)
         {
             _diagWorker = diagWorker;
             _logger = loggerFactory.CreateLogger<CodeCheckService>();
+            _clientRequestService = clientRequestService;
         }
 
         public async Task<QuickFixResponse> Handle(CodeCheckRequest request)
         {
+            var cancellationToken = _clientRequestService.GetToken(request);
             if (string.IsNullOrEmpty(request.FileName))
             {
-                var allDiagnostics = await _diagWorker.GetAllDiagnosticsAsync();
+                var allDiagnostics = await _diagWorker.GetAllDiagnosticsAsync(cancellationToken);
                 return GetResponseFromDiagnostics(allDiagnostics, fileName: null);
             }
 
-            var diagnostics = await _diagWorker.GetDiagnostics(ImmutableArray.Create(request.FileName));
+            var diagnostics = await _diagWorker.GetDiagnostics(ImmutableArray.Create(request.FileName), cancellationToken);
 
             return GetResponseFromDiagnostics(diagnostics, request.FileName);
         }

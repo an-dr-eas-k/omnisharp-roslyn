@@ -33,8 +33,9 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
             [ImportMany] IEnumerable<ICodeActionProvider> providers,
             ILoggerFactory loggerFactory,
             ICsDiagnosticWorker diagnostics,
-            CachingCodeFixProviderForProjects codeFixesForProjects)
-            : base(workspace, providers, loggerFactory.CreateLogger<RunCodeActionService>(), diagnostics, codeFixesForProjects)
+            CachingCodeFixProviderForProjects codeFixesForProjects,
+            OmniSharpClientRequestService clientRequestService)
+            : base(workspace, providers, loggerFactory.CreateLogger<RunCodeActionService>(), diagnostics, codeFixesForProjects, clientRequestService)
         {
             _loader = loader;
             _workspaceAssembly = _loader.LazyLoad(Configuration.RoslynWorkspaces);

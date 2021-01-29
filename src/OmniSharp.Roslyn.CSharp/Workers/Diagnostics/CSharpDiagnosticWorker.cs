@@ -17,7 +17,7 @@ using OmniSharp.Roslyn.CSharp.Services.Diagnostics;
 
 namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
 {
-    public class CSharpDiagnosticWorker: ICsDiagnosticWorker, IDisposable
+    public class CSharpDiagnosticWorker : ICsDiagnosticWorker, IDisposable
     {
         private readonly ILogger _logger;
         private readonly OmniSharpWorkspace _workspace;
@@ -68,7 +68,7 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             {
                 var newDocument = changeEvent.NewSolution.GetDocument(changeEvent.DocumentId);
 
-                EmitDiagnostics(new [] {newDocument.Id}.Union(_workspace.GetOpenDocumentIds()).Select(x => _workspace.CurrentSolution.GetDocument(x).FilePath).ToArray());
+                EmitDiagnostics(new[] { newDocument.Id }.Union(_workspace.GetOpenDocumentIds()).Select(x => _workspace.CurrentSolution.GetDocument(x).FilePath).ToArray());
             }
             else if (changeEvent.Kind == WorkspaceChangeKind.ProjectAdded || changeEvent.Kind == WorkspaceChangeKind.ProjectReloaded)
             {
@@ -134,7 +134,7 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             return ImmutableArray<DocumentId>.Empty;
         }
 
-        public async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths)
+        public async Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths, CancellationToken cancellationToken = default)
         {
             if (!documentPaths.Any()) return ImmutableArray<DocumentDiagnostics>.Empty;
 
@@ -148,7 +148,7 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
 
             foreach (var document in documents)
             {
-                if(document?.Project?.Name == null)
+                if (document?.Project?.Name == null)
                     continue;
 
                 var projectName = document.Project.Name;
@@ -159,19 +159,19 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             return results.ToImmutableArray();
         }
 
-        private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsForDocument(Document document, string projectName)
+        private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsForDocument(Document document, string projectName, CancellationToken cancellationToken = default)
         {
             // Only basic syntax check is available if file is miscellanous like orphan .cs file.
             // Those projects are on hard coded virtual project
             if (projectName == $"{Configuration.OmniSharpMiscProjectName}.csproj")
             {
-                var syntaxTree = await document.GetSyntaxTreeAsync();
+                var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
                 return syntaxTree.GetDiagnostics().ToImmutableArray();
             }
             else
             {
-                var semanticModel = await document.GetSemanticModelAsync();
-                return semanticModel.GetDiagnostics();
+                var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
+                return semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
             }
         }
 
@@ -189,10 +189,10 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             return documents.Select(x => x.Id).ToImmutableArray();
         }
 
-        public Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync()
+        public Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync(CancellationToken cancellationToken = default)
         {
             var documents = _workspace.CurrentSolution.Projects.SelectMany(x => x.Documents).Select(x => x.FilePath).ToImmutableArray();
-            return GetDiagnostics(documents);
+            return GetDiagnostics(documents, cancellationToken);
         }
 
         public void Dispose()
@@ -203,19 +203,19 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             _disposable.Dispose();
         }
 
-        public async Task<IEnumerable<Diagnostic>> AnalyzeDocumentAsync(Document document, CancellationToken cancellationToken)
+        public async Task<IEnumerable<Diagnostic>> AnalyzeDocumentAsync(Document document, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await GetDiagnosticsForDocument(document, document.Project.Name);
+            return await GetDiagnosticsForDocument(document, document.Project.Name, cancellationToken);
         }
 
-        public async Task<IEnumerable<Diagnostic>> AnalyzeProjectsAsync(Project project, CancellationToken cancellationToken)
+        public async Task<IEnumerable<Diagnostic>> AnalyzeProjectsAsync(Project project, CancellationToken cancellationToken = default)
         {
             var diagnostics = new List<Diagnostic>();
             foreach (var document in project.Documents)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                diagnostics.AddRange(await GetDiagnosticsForDocument(document, project.Name));
+                diagnostics.AddRange(await GetDiagnosticsForDocument(document, project.Name, cancellationToken));
             }
 
             return diagnostics;

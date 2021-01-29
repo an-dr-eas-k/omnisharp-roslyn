@@ -210,10 +210,6 @@ namespace OmniSharp.Stdio
 
             try
             {
-                if (request.Command.StartsWith("/cancelRequest"))
-                {
-                    log.Debug("cancelrequest");
-                }
                 if (!request.Command.StartsWith("/"))
                 {
                     request.Command = $"/{request.Command}";
@@ -221,15 +217,16 @@ namespace OmniSharp.Stdio
                 // hand off request to next layer
                 if (_endpointHandlers.TryGetValue(request.Command, out var handler))
                 {
-                    if (handler is object)
-                    {
-
-                    }
                     var result = await handler.Value.Handle(request);
-                    response.Body = result;
+                    if (response != null) { response.Body = result; }
                     return;
                 }
                 throw new NotSupportedException($"Command '{request.Command}' is not supported.");
+            }
+            catch (TaskCanceledException)
+            {
+                response = null;
+                logger.LogDebug($"request (seq: {request.Seq}) was cancelled");
             }
             catch (Exception e)
             {
@@ -245,22 +242,25 @@ namespace OmniSharp.Stdio
             }
             finally
             {
-                // response gets logged when Debug or more detailed log level is enabled
-                // or when we have unsuccessful response (exception)
-                if (logger.IsEnabled(LogLevel.Debug) || !response.Success)
+                if (response != null)
                 {
-                    // if logging is at Debug level, request would have already been logged
-                    // however not for higher log levels, so we want to explicitly log the request too
-                    if (!logger.IsEnabled(LogLevel.Debug))
+                    // response gets logged when Debug or more detailed log level is enabled
+                    // or when we have unsuccessful response (exception)
+                    if (logger.IsEnabled(LogLevel.Debug) || !response.Success)
                     {
-                        LogRequest(json, logger, LogLevel.Warning);
+                        // if logging is at Debug level, request would have already been logged
+                        // however not for higher log levels, so we want to explicitly log the request too
+                        if (!logger.IsEnabled(LogLevel.Debug))
+                        {
+                            LogRequest(json, logger, LogLevel.Warning);
+                        }
+
+                        LogResponse(response.ToString(), logger, response.Success);
                     }
 
-                    LogResponse(response.ToString(), logger, response.Success);
+                    // actually write it
+                    _writer.WriteLine(response);
                 }
-
-                // actually write it
-                _writer.WriteLine(response);
             }
         }
 

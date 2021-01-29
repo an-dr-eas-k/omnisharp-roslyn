@@ -16,7 +16,7 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
     // Theres several implementation of worker currently based on configuration.
     // This will handle switching between them.
     [Export(typeof(ICsDiagnosticWorker)), Shared]
-    public class CsharpDiagnosticWorkerComposer: ICsDiagnosticWorker, IDisposable
+    public class CsharpDiagnosticWorkerComposer : ICsDiagnosticWorker, IDisposable
     {
         private readonly OmniSharpWorkspace _workspace;
         private readonly IEnumerable<ICodeActionProvider> _providers;
@@ -67,14 +67,14 @@ namespace OmniSharp.Roslyn.CSharp.Workers.Diagnostics
             }
         }
 
-        public Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync()
+        public Task<ImmutableArray<DocumentDiagnostics>> GetAllDiagnosticsAsync(CancellationToken cancellationToken = default)
         {
-            return _implementation.GetAllDiagnosticsAsync();
+            return _implementation.GetAllDiagnosticsAsync(cancellationToken);
         }
 
-        public Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths)
+        public Task<ImmutableArray<DocumentDiagnostics>> GetDiagnostics(ImmutableArray<string> documentPaths, CancellationToken cancellationToken = default)
         {
-            return _implementation.GetDiagnostics(documentPaths);
+            return _implementation.GetDiagnostics(documentPaths, cancellationToken);
         }
 
         public ImmutableArray<DocumentId> QueueDocumentsForDiagnostics()
